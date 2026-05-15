@@ -283,6 +283,18 @@ footer a:hover{color:var(--terra)}
 .lbox p{color:var(--muted);font-size:.82rem;margin-bottom:1rem}
 .lbox input{width:100%;padding:.65rem .9rem;border:1px solid var(--bdr);border-radius:8px;margin-bottom:.7rem;font-size:.87rem;outline:none}
 .lbox input:focus{border-color:var(--terra)}
+.gal-item{border-radius:8px;overflow:hidden;aspect-ratio:4/3;cursor:pointer;background:var(--cream)}
+.gal-item img{width:100%;height:100%;object-fit:cover;transition:.3s}
+.gal-item:hover img{transform:scale(1.04)}
+.vid-wrap{border-radius:var(--r);overflow:hidden;aspect-ratio:16/9}
+.vid-wrap iframe{width:100%;height:100%;border:none}
+.lightbox{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:4000;display:none;align-items:center;justify-content:center}
+.lightbox.open{display:flex}
+.lb-img{max-width:90vw;max-height:85vh;border-radius:8px;object-fit:contain}
+.lb-close{position:absolute;top:1rem;right:1.2rem;background:none;border:none;color:#fff;font-size:2rem;cursor:pointer;z-index:4001}
+.lb-prev,.lb-next{position:absolute;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.15);border:none;color:#fff;font-size:1.8rem;cursor:pointer;padding:.5rem .9rem;border-radius:8px;z-index:4001}
+.lb-prev{left:1rem}.lb-next{right:1rem}
+.lb-counter{position:absolute;bottom:1rem;left:50%;transform:translateX(-50%);color:rgba(255,255,255,.6);font-size:.8rem}
 .loading{text-align:center;padding:3rem;color:var(--muted);font-size:.85rem}
 hr{border:none;border-top:1px solid var(--bdr);margin:1.2rem 0}
 </style>
@@ -422,6 +434,15 @@ hr{border:none;border-top:1px solid var(--bdr);margin:1.2rem 0}
 </section>
 
 <!-- MODAL SUITE -->
+<!-- LIGHTBOX -->
+<div class="lightbox" id="lightbox">
+  <button class="lb-close" onclick="closeLB()">✕</button>
+  <button class="lb-prev" onclick="lbNav(-1)">‹</button>
+  <img class="lb-img" id="lb-img" src="" alt=""/>
+  <button class="lb-next" onclick="lbNav(1)">›</button>
+  <div class="lb-counter" id="lb-counter"></div>
+</div>
+
 <div class="modal-ov" id="rmmodal">
   <div class="modal">
     <div class="mbar" id="mbar"></div>
@@ -438,6 +459,17 @@ hr{border:none;border-top:1px solid var(--bdr);margin:1.2rem 0}
   <button class="lb-next" onclick="lbNav(1)">›</button>
   <div class="lb-counter" id="lb-counter"></div>
 </div>
+
+<!-- GALERIE MAISON -->
+<section id="galerie" style="background:#fff">
+  <div class="si">
+    <p class="slbl" id="gal-label">Galerie</p>
+    <h2 class="stitle" id="gal-title">La maison en images</h2>
+    <p class="ssub" id="gal-sub"></p>
+    <div id="house-photos" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.6rem;margin-top:1rem"></div>
+    <div id="house-videos" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:.8rem;margin-top:1rem"></div>
+  </div>
+</section>
 
 <!-- REVIEWS -->
 <section id="reviews" style="background:var(--cream)">
@@ -541,7 +573,8 @@ hr{border:none;border-top:1px solid var(--bdr);margin:1.2rem 0}
       <div class="ani" onclick="showTab('freesec')"><span>➕</span><span class="anil"> Sections +</span></div>
       <div class="ani" onclick="showTab('rooms')"><span>🛏</span><span class="anil"> Suites</span></div>
       <div class="ani" onclick="showTab('map')"><span>🗺</span><span class="anil"> Carte</span></div>
-      <div class="ani" onclick="showTab('rev')"><span>⭐</span><span class="anil"> Avis</span></div>
+      <div class="ani" onclick="showTab('gallery')"><span>📸</span><span class="anil"> Galerie</span></div>
+<div class="ani" onclick="showTab('rev')"><span>⭐</span><span class="anil"> Avis</span></div>
       <div class="ani" onclick="showTab('faqadm')"><span>❓</span><span class="anil"> FAQ</span></div>
       <div class="ani" onclick="showTab('apps')"><span>📩</span><span class="anil"> Demandes</span></div>
       <div class="ani" onclick="showTab('set')"><span>🔒</span><span class="anil"> Params</span></div>
@@ -744,7 +777,7 @@ async function initData(){
   }catch(e){toast('❌ Erreur connexion Supabase');console.error(e)}
 }
 
-function renderAll(){applyTexts();renderProfiles();renderServices();renderInfocards();renderFreeSections();renderColocs();renderHouseGallery();renderCals();renderRooms();renderRevs();renderFAQ()}
+function renderAll(){renderHouseGallery();applyTexts();renderProfiles();renderServices();renderInfocards();renderFreeSections();renderColocs();renderHouseGallery();renderCals();renderRooms();renderRevs();renderFAQ()}
 
 function applyTexts(){
   const c=S.coloc,t=c.texts||{};
@@ -907,6 +940,20 @@ function openRm(id){
   _('rmmodal').classList.add('open');
 }
 
+let lbPhotos=[],lbIdx=0;
+function openLB(photos,idx){lbPhotos=photos;lbIdx=idx;_('lb-img').src=photos[idx];_('lb-counter').textContent=(idx+1)+' / '+photos.length;_('lightbox').classList.add('open')}
+function closeLB(){_('lightbox').classList.remove('open')}
+function lbNav(d){lbIdx=(lbIdx+d+lbPhotos.length)%lbPhotos.length;_('lb-img').src=lbPhotos[lbIdx];_('lb-counter').textContent=(lbIdx+1)+' / '+lbPhotos.length}
+document.addEventListener('keydown',e=>{if(!_('lightbox').classList.contains('open'))return;if(e.key==='ArrowLeft')lbNav(-1);if(e.key==='ArrowRight')lbNav(1);if(e.key==='Escape')closeLB()});
+function ytId(url){const m=url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]{11})/);return m?m[1]:null}
+function renderHouseGallery(){
+  const photos=S.coloc.housePhotos||[],videos=S.coloc.houseVideos||[];
+  if(_('gal-title'))_('gal-title').textContent=S.coloc.houseGalTitle||'La maison en images';
+  if(_('gal-sub'))_('gal-sub').textContent=S.coloc.houseGalSub||'';
+  _('house-photos').innerHTML=photos.map((src,i)=>`<div class="gal-item" onclick="openLB(${JSON.stringify(photos)},${i})"><img src="${src}" alt="Maison" loading="lazy"/></div>`).join('');
+  _('house-videos').innerHTML=videos.map(url=>{const id=ytId(url);return id?`<div class="vid-wrap"><iframe src="https://www.youtube.com/embed/${id}" allowfullscreen loading="lazy"></iframe></div>`:''}).join('');
+}
+
 function renderRevs(){
   const ok=S.reviews.filter(r=>r.ok!==false&&r.approved!==false);
   _('revgrid').innerHTML=!ok.length?`<p style="color:var(--muted);grid-column:1/-1">Soyez le premier à partager votre expérience.</p>`:ok.map(r=>{
@@ -955,7 +1002,7 @@ function checkPw(){const pw=_('admpw').value;if(pw===(S.coloc?.pw||'admin123')){
 function showAdm(){_('admpanel').classList.add('open');renderTab(curTab)}
 function closeAdm(){_('admpanel').classList.remove('open')}
 function showTab(t){curTab=t;document.querySelectorAll('.ani').forEach(el=>el.classList.toggle('active',el.getAttribute('onclick').includes(`'${t}'`)));renderTab(t)}
-function renderTab(t){({gen:tabGen,hero:tabHero,texts:tabTexts,gallery:tabGallery,colocs:tabColocs,profiles:tabProfiles,services:tabServices,infoprat:tabInfo,freesec:tabFree,rooms:tabRooms,map:tabMap,rev:tabRev,faqadm:tabFaq,apps:tabApps,set:tabSet})[t](_('acontent'))}
+function renderTab(t){({gen:tabGen,hero:tabHero,texts:tabTexts,gallery:tabGallery,rev:tabRev,colocs:tabColocs,profiles:tabProfiles,services:tabServices,infoprat:tabInfo,freesec:tabFree,rooms:tabRooms,map:tabMap,rev:tabRev,faqadm:tabFaq,apps:tabApps,set:tabSet})[t](_('acontent'))}
 const ai=(l,id,v,tp='text')=>`<div><label class="al">${l}</label><input class="ai" type="${tp}" id="${id}" value="${(v||'').toString().replace(/"/g,'&quot;')}"/></div>`;
 const ata=(l,id,v,rows=2)=>`<div><label class="al">${l}</label><textarea class="ai" id="${id}" rows="${rows}" style="resize:vertical">${v||''}</textarea></div>`;
 const ah=t=>`<h2 style="color:#ccc;font-family:var(--serif);font-weight:400;margin-bottom:1.2rem;font-size:1.3rem">${t}</h2>`;
@@ -1261,6 +1308,10 @@ async function tabApps(c){
 }
 
 // ── PARAMÈTRES ──
+function tabGallery(c){c.innerHTML=ah('Galerie de la maison')+`<div class="acard"><h3>Titre</h3><label class="al">Titre</label><input class="ai" id="hgaltitle" value="${S.coloc.houseGalTitle||'La maison en images'}"/><label class="al">Sous-titre</label><input class="ai" id="hgalsub" value="${S.coloc.houseGalSub||''}"/><button class="abtn abp mt1" onclick="saveGalTitles()">💾 Enregistrer</button></div><div class="acard"><h3>📸 Photos (URLs, une par ligne)</h3><textarea class="ai" id="hphotos" rows="8" style="resize:vertical">${(S.coloc.housePhotos||[]).join('\n')}</textarea><button class="abtn abp mt1" onclick="saveHousePhotos()">💾 Enregistrer</button></div><div class="acard"><h3>🎬 Vidéos YouTube (URLs, une par ligne)</h3><textarea class="ai" id="hvideos" rows="4" style="resize:vertical">${(S.coloc.houseVideos||[]).join('\n')}</textarea><button class="abtn abp mt1" onclick="saveHouseVideos()">💾 Enregistrer</button></div>`}
+async function saveGalTitles(){S.coloc.houseGalTitle=_('hgaltitle').value;S.coloc.houseGalSub=_('hgalsub').value;const{_id,...data}=S.coloc;await sbUp('coloc',data,_id);renderHouseGallery();toast('✓ Mis à jour')}
+async function saveHousePhotos(){S.coloc.housePhotos=(_('hphotos').value||'').split('\n').filter(s=>s.trim());const{_id,...data}=S.coloc;await sbUp('coloc',data,_id);renderHouseGallery();toast('✓ Photos mises à jour')}
+async function saveHouseVideos(){S.coloc.houseVideos=(_('hvideos').value||'').split('\n').filter(s=>s.trim());const{_id,...data}=S.coloc;await sbUp('coloc',data,_id);renderHouseGallery();toast('✓ Vidéos mises à jour')}
 function tabSet(c){c.innerHTML=ah('Paramètres')+`<div class="acard"><h3>Mot de passe admin</h3>
 <label class="al">Nouveau</label><input class="ai" type="password" id="npw"/>
 <label class="al" style="margin-top:.4rem">Confirmer</label><input class="ai" type="password" id="cpw"/>
